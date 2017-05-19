@@ -1,4 +1,4 @@
-module Interpreter exposing (Memory, BrainfuckProgram, runProgram)
+module Interpreter exposing (Memory, BrainfuckProgram, readProgram, runProgram)
 
 import Char exposing (fromCode, toCode)
 import Debug exposing (crash)
@@ -101,5 +101,5 @@ readProgram program =
                 Just (h, t) -> Just (BrainfuckProgram [] h (String.toList t))
 
 -- TODO: change return type to deal with I/O here, plus actually implementing
-runProgram : String -> Memory -> Memory
-runProgram program memory = memory
+runProgram : BrainfuckProgram -> Memory -> (BrainfuckProgram, Memory)
+runProgram program memory = (program, memory)

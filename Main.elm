@@ -3,20 +3,24 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput)
 import Stream exposing (Stream)
 
-import Interpreter exposing (Memory, BrainfuckProgram, runProgram)
+import Interpreter exposing (Memory, BrainfuckProgram, readProgram, runProgram)
 
 
 main : Program Never Model Msg
 main = Html.beginnerProgram { model = model, view = view, update = update }
 
 -- MODEL
-type alias Model = { program : String, memory : Memory }
-
-initialMemory : Memory
-initialMemory = Memory (Stream.value '\0') '\0' (Stream.value '\0')
+type alias Model = { maybeCode : Maybe BrainfuckProgram
+                   , memory : Memory
+                   , rawProgram : String
+                   }
 
 model : Model
-model = { program = "", memory = initialMemory }
+model = { maybeCode = Nothing, memory = initialMemory, rawProgram = "" }
+
+-- by default, memory has the null byte in each of its infinite cells
+initialMemory : Memory
+initialMemory = Memory (Stream.value '\0') '\0' (Stream.value '\0')
 
 
 -- UPDATE
@@ -25,9 +29,12 @@ type Msg = Load String | Run | Clear
 update : Msg -> Model -> Model
 update msg model = case msg of
     Load p ->
-      { model | program = p }
+      { model | maybeCode = readProgram p, rawProgram = p }
     Run ->
-      { model | memory = runProgram (model.program) (model.memory) }
+        case model.maybeCode of
+            Nothing -> model
+            Just code -> let (newCode, newMemory) = runProgram code model.memory
+                         in { model | maybeCode = Just newCode, memory = newMemory }
     Clear ->
       { model | memory = initialMemory }
 
