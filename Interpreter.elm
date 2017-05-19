@@ -103,11 +103,16 @@ readProgram program =
 -- TODO: how to deal with IO? (not yet implemented)
 runProgram : BrainfuckProgram -> Memory -> (BrainfuckProgram, Memory)
 runProgram program memory =
-    case program.curr of
-        '>' -> (goRight program, incrementDataPointer memory)
-        '<' -> (goRight program, decrementDataPointer memory)
-        '+' -> (goRight program, incrementByte memory)
-        '-' -> (goRight program, decrementByte memory)
-        '[' -> (loopL memory program, memory)
-        ']' -> (loopR memory program, memory)
-        _   -> (goRight program, memory)
+    let interpret program memory =
+            case program.curr of
+                '>' -> (goRight program, incrementDataPointer memory)
+                '<' -> (goRight program, decrementDataPointer memory)
+                '+' -> (goRight program, incrementByte memory)
+                '-' -> (goRight program, decrementByte memory)
+                '[' -> (loopL memory program, memory)
+                ']' -> (loopR memory program, memory)
+                _   -> (goRight program, memory)
+        (newProgram, newMemory) = interpret program memory
+    in if List.isEmpty newProgram.right
+       then (newProgram, newMemory) -- should I use the dummy trick again...?
+       else runProgram newProgram newMemory
