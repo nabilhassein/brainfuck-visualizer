@@ -1,17 +1,15 @@
-import Html exposing (Html, Attribute, div, input, text, button)
+import Html exposing (Html, Attribute, div, input, text, button, br)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput)
 import Stream exposing (Stream)
+
+import Interpreter exposing (Memory, runProgram)
 
 
 main : Program Never Model Msg
 main = Html.beginnerProgram { model = model, view = view, update = update }
 
 -- MODEL
-
--- memory is a tape extending infinitely in both directions; this is a zipper
-type alias Memory = { left : Stream Char, curr: Char, right : Stream Char }
-
 type alias Model = { program : String, memory : Memory }
 
 initialMemory : Memory
@@ -22,16 +20,11 @@ model = { program = "", memory = initialMemory }
 
 
 -- UPDATE
-
--- TODO: change return type to deal with I/O here, plus actually implementing
-runProgram : String -> Memory -> Memory
-runProgram program memory = memory
-
-type Msg = LoadProgram String | Run | Clear
+type Msg = Load String | Run | Clear
 
 update : Msg -> Model -> Model
 update msg model = case msg of
-    LoadProgram p ->
+    Load p ->
       { model | program = p }
     Run ->
       { model | memory = runProgram (model.program) (model.memory) }
@@ -40,10 +33,17 @@ update msg model = case msg of
 
 
 -- VIEW
+preview : Int -> Memory -> String
+preview n memory =
+    let f chars = Stream.limit n chars |> Stream.toList |> List.intersperse '|' |> String.fromList
+    in String.concat([f memory.left, "|", String.fromChar memory.curr, "|", f memory.right])
+
 
 view : Model -> Html Msg
 view model = div [] [
-              input [ placeholder "brainfuck program", onInput LoadProgram ] []
+              input [ placeholder "brainfuck program", onInput Load ] []
              , button [onClick Run] [text "run program"]
-             , button [onClick Clear] [text "clear memory"]                  
+             , button [onClick Clear] [text "clear memory"]
+             , br [] []
+             , div [] [text (preview 10 model.memory)]
              ]
