@@ -3,7 +3,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput)
 import Stream exposing (Stream)
 
-import Interpreter exposing (Memory, runProgram)
+import Interpreter exposing (Memory, BrainfuckProgram, runProgram)
 
 
 main : Program Never Model Msg

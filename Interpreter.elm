@@ -1,12 +1,25 @@
-module Interpreter exposing (..)
+module Interpreter exposing (Memory, BrainfuckProgram, runProgram)
 
 import Char exposing (fromCode, toCode)
-import Stream exposing (Stream)
 import Debug exposing (crash)
+import Stream exposing (Stream)
 
 
--- memory is a tape extending infinitely in both directions; this is a zipper
+-- memory and programs are both examples of the zipper data structure
+-- if unfamiliar see http://learnyouahaskell.com/zippers
+
+-- memory is a tape extending infinitely in both directions
 type alias Memory = { left : Stream Char, curr: Char, right : Stream Char }
+
+-- programs are finite zippers
+type alias BrainfuckProgram = { left : List Char, curr: Char, right : List Char }
+
+goRight : BrainfuckProgram -> BrainfuckProgram
+goRight program =
+    case (List.head program.right, List.tail program.right) of
+        (Just x, Just rs) ->
+            BrainfuckProgram (program.curr :: program.left) x rs
+        _ -> crash "TODO"
 
 
 -- commands in the brainfuck language
@@ -39,7 +52,18 @@ incrementByte memory = { memory | curr = (fromCode (toCode memory.curr + 1)) }
 decrementByte : Memory -> Memory
 decrementByte memory = { memory | curr = (fromCode (toCode memory.curr - 1)) }
 
+-- command: [
+loopL : Memory -> BrainfuckProgram -> BrainfuckProgram
+loopL memory program =
+    let jumpPast count program =
+        case (count, List.head program.right) of
+            (0, Just ']') -> goRight program |> goRight
+            (_, Just ']') -> jumpPast (count - 1) (goRight program)
+            (_, Just '[') -> jumpPast (count + 1) (goRight program)
+            _             -> jumpPast count (goRight program)
+    in if toCode memory.curr == 0 then jumpPast 0 program else goRight program
+
+
 -- TODO: change return type to deal with I/O here, plus actually implementing
 runProgram : String -> Memory -> Memory
 runProgram program memory = memory
-
