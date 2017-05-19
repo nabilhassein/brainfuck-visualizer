@@ -100,6 +100,14 @@ readProgram program =
                 Nothing -> Nothing
                 Just (h, t) -> Just (BrainfuckProgram [] h (String.toList t))
 
--- TODO: change return type to deal with I/O here, plus actually implementing
+-- TODO: how to deal with IO? (not yet implemented)
 runProgram : BrainfuckProgram -> Memory -> (BrainfuckProgram, Memory)
-runProgram program memory = (program, memory)
+runProgram program memory =
+    case program.curr of
+        '>' -> (goRight program, incrementDataPointer memory)
+        '<' -> (goRight program, decrementDataPointer memory)
+        '+' -> (goRight program, incrementByte memory)
+        '-' -> (goRight program, decrementByte memory)
+        '[' -> (loopL memory program, memory)
+        ']' -> (loopR memory program, memory)
+        _   -> (goRight program, memory)
