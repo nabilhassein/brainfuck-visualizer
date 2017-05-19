@@ -14,12 +14,19 @@ type alias Memory = { left : Stream Char, curr: Char, right : Stream Char }
 -- programs are finite zippers
 type alias BrainfuckProgram = { left : List Char, curr: Char, right : List Char }
 
-goRight : BrainfuckProgram -> Maybe BrainfuckProgram
+goRight : BrainfuckProgram -> BrainfuckProgram
 goRight program =
     case (List.head program.right, List.tail program.right) of
         (Just x, Just rs) ->
-            Just (BrainfuckProgram (program.curr :: program.left) x rs)
-        _ -> Nothing
+            BrainfuckProgram (program.curr :: program.left) x rs
+        _ -> crash "bug: should not goRight in this case"
+
+goLeft : BrainfuckProgram -> BrainfuckProgram
+goLeft program =
+    case (List.head program.left, List.tail program.left) of
+        (Just x, Just ls) ->
+            BrainfuckProgram ls x (program.curr :: program.right)
+        _ -> crash "bug: should not goLeft in this case"
 
 
 -- commands in the brainfuck language
@@ -53,19 +60,25 @@ decrementByte : Memory -> Memory
 decrementByte memory = { memory | curr = (fromCode (toCode memory.curr - 1)) }
 
 -- command: [
-loopL : Memory -> BrainfuckProgram -> Maybe BrainfuckProgram
+loopL : Memory -> BrainfuckProgram -> BrainfuckProgram
 loopL memory program =
     let jumpPast count program =
         case (count, List.head program.right) of
-            (0, Just ']') ->
-                goRight program |> Maybe.andThen goRight
-            (_, Just ']') ->
-                goRight program |> Maybe.andThen (jumpPast (count-1))
-            (_, Just '[') ->
-                goRight program |> Maybe.andThen (jumpPast (count+1))
-            _ ->
-                goRight program |> Maybe.andThen (jumpPast count)
+            (0, Just ']') -> goRight program |> goRight
+            (_, Just ']') -> jumpPast (count - 1) (goRight program)
+            (_, Just '[') -> jumpPast (count + 1) (goRight program)
+            _             -> jumpPast count (goRight program)
     in if toCode memory.curr == 0 then jumpPast 0 program else goRight program
+
+loopR : Memory -> BrainfuckProgram -> BrainfuckProgram
+loopR memory program =
+    let jumpBack count program =
+        case (count, List.head program.left) of
+            (0, Just '[') -> program
+            (_, Just '[') -> jumpBack (count - 1) (goLeft program)
+            (_, Just ']') -> jumpBack (count + 1) (goLeft program)
+            _             -> jumpBack count (goLeft program)
+    in if toCode memory.curr /= 0 then jumpBack 0 program else goRight program
 
 
 -- TODO: change return type to deal with I/O here, plus actually implementing
