@@ -20,7 +20,7 @@ model = { maybeCode = Nothing, memory = initialMemory, rawProgram = "" }
 
 -- by default, memory has the null byte in each of its infinite cells
 initialMemory : Memory
-initialMemory = Memory (Stream.value '\0') '\0' (Stream.value '\0')
+initialMemory = Memory (Stream.value '0') '0' (Stream.value '0')
 
 
 -- UPDATE

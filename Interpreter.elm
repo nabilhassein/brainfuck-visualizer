@@ -53,11 +53,11 @@ decrementDataPointer memory =
 
 -- command: +
 incrementByte : Memory -> Memory
-incrementByte memory = { memory | curr = (fromCode (toCode memory.curr + 1)) }
+incrementByte memory = { memory | curr = toCode memory.curr + 1 |> fromCode }
 
 -- command: -
 decrementByte : Memory -> Memory
-decrementByte memory = { memory | curr = (fromCode (toCode memory.curr - 1)) }
+decrementByte memory = { memory | curr = toCode memory.curr - 1 |> fromCode }
 
 -- command: [
 loopL : Memory -> BrainfuckProgram -> BrainfuckProgram
@@ -65,9 +65,9 @@ loopL memory program =
     let jumpPast count program =
         case (count, List.head program.right) of
             (0, Just ']') -> goRight program |> goRight
-            (_, Just ']') -> jumpPast (count - 1) (goRight program)
-            (_, Just '[') -> jumpPast (count + 1) (goRight program)
-            _             -> jumpPast count (goRight program)
+            (_, Just ']') -> goRight program |> jumpPast (count - 1)
+            (_, Just '[') -> goRight program |> jumpPast (count + 1)
+            _             -> goRight program |> jumpPast count
     in if toCode memory.curr == 0 then jumpPast 0 program else goRight program
 
 -- command: ]
@@ -76,9 +76,9 @@ loopR memory program =
     let jumpBack count program =
         case (count, List.head program.left) of
             (0, Just '[') -> program
-            (_, Just '[') -> jumpBack (count - 1) (goLeft program)
-            (_, Just ']') -> jumpBack (count + 1) (goLeft program)
-            _             -> jumpBack count (goLeft program)
+            (_, Just '[') -> goRight program |> jumpBack (count - 1)
+            (_, Just ']') -> goRight program |> jumpBack (count + 1)
+            _             -> goRight program |> jumpBack count
     in if toCode memory.curr /= 0 then jumpBack 0 program else goRight program
 
 
@@ -91,10 +91,10 @@ readProgram program =
                               '[' -> \n -> n + 1
                               ']' -> \n -> n - 1
                               _   -> identity
-        runningCount = List.scanl countBrackets 0 (String.toList program)
+        runningCount = String.toList program |> List.scanl countBrackets 0
         anyMismatched = List.member -1 runningCount
         bracketCount = List.reverse runningCount |> List.head
-    in if anyMismatched || bracketCount /= (Just 0)
+    in if anyMismatched || bracketCount /= Just 0
        then Nothing
        else case String.uncons program of
                 Nothing -> Nothing
