@@ -70,6 +70,7 @@ loopL memory program =
             _             -> jumpPast count (goRight program)
     in if toCode memory.curr == 0 then jumpPast 0 program else goRight program
 
+-- command: ]
 loopR : Memory -> BrainfuckProgram -> BrainfuckProgram
 loopR memory program =
     let jumpBack count program =
@@ -80,6 +81,24 @@ loopR memory program =
             _             -> jumpBack count (goLeft program)
     in if toCode memory.curr /= 0 then jumpBack 0 program else goRight program
 
+
+-- the only possible syntax errors in a brainfuck program are mismatched braces
+-- all characters besides < > + - [ ] . , are ignored as whitespace
+-- TODO: disambiguate error cases to point user to error
+readProgram : String -> Maybe BrainfuckProgram
+readProgram program =
+    let countBrackets c = case c of
+                              '[' -> \n -> n + 1
+                              ']' -> \n -> n - 1
+                              _   -> identity
+        runningCount = List.scanl countBrackets 0 (String.toList program)
+        anyMismatched = List.member -1 runningCount
+        bracketCount = List.reverse runningCount |> List.head
+    in if anyMismatched || bracketCount /= (Just 0)
+       then Nothing
+       else case String.uncons program of
+                Nothing -> Nothing
+                Just (h, t) -> Just (BrainfuckProgram [] h (String.toList t))
 
 -- TODO: change return type to deal with I/O here, plus actually implementing
 runProgram : String -> Memory -> Memory
