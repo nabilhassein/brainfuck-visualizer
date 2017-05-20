@@ -7,7 +7,7 @@
     "test": "elm-test",
     "repl": "elm-repl",
     "start": "elm-reactor",
-    "build": "elm-make Main.elm --output=index.js --warn"
+    "build": "elm-make src/Main.elm --output=index.js --warn"
   },
   "keywords": [
     "elm",
