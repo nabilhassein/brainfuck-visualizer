@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "elm-test",
     "repl": "elm-repl",
     "start": "elm-reactor",
     "build": "elm-make Main.elm --output=index.js --warn"
@@ -20,5 +20,8 @@
   "license": "ISC",
   "dependencies": {
     "elm": "^0.18.0"
+  },
+  "devDependencies": {
+    "elm-test": "^0.18.2"
   }
 }
