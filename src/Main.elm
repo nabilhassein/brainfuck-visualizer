@@ -55,8 +55,8 @@ view model = div [] [
                                     Just _  -> False
                   ]
                   [text <| case model.maybeCode of
-                               Nothing -> "can't run invalid program"
-                               Just _  -> "run program"]
+                               Nothing -> "invalid program :("
+                               Just _  -> "run this program!!"]
              , button [onClick Clear] [text "clear memory"]
              , br [] []
              , div [] [text (preview 10 model.memory)]
