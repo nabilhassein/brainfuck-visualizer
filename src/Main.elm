@@ -20,7 +20,7 @@ model = { maybeCode = Nothing, memory = initialMemory, rawProgram = "" }
 
 -- by default, memory has the null byte in each of its infinite cells
 initialMemory : Memory
-initialMemory = Memory (Stream.value '\0') '\0' (Stream.value '\0')
+initialMemory = Memory (Stream.value '0') '0' (Stream.value '0')
 
 
 -- UPDATE
@@ -48,7 +48,15 @@ preview n memory =
 view : Model -> Html Msg
 view model = div [] [
               input [ placeholder "brainfuck program", onInput Load ] []
-             , button [onClick Run] [text "run program"]
+             , button
+                  [onClick Run
+                  , disabled <| case model.maybeCode of
+                                    Nothing -> True
+                                    Just _  -> False
+                  ]
+                  [text <| case model.maybeCode of
+                               Nothing -> "can't run invalid program"
+                               Just _  -> "run program"]
              , button [onClick Clear] [text "clear memory"]
              , br [] []
              , div [] [text (preview 10 model.memory)]
