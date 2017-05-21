@@ -16,16 +16,16 @@ type alias BrainfuckProgram = { left : List Char, curr: Char, right : List Char 
 
 goRight : BrainfuckProgram -> BrainfuckProgram
 goRight program =
-    case (List.head program.right, List.tail program.right) of
-        (Just x, Just rs) ->
-            BrainfuckProgram (program.curr :: program.left) x rs
+    case program.right of
+        r :: rs ->
+            BrainfuckProgram (program.curr :: program.left) r rs
         _ -> crash "bug: should not goRight in this case"
 
 goLeft : BrainfuckProgram -> BrainfuckProgram
 goLeft program =
-    case (List.head program.left, List.tail program.left) of
-        (Just x, Just ls) ->
-            BrainfuckProgram ls x (program.curr :: program.right)
+    case program.left of
+        l :: ls ->
+            BrainfuckProgram ls l (program.curr :: program.right)
         _ -> crash "bug: should not goLeft in this case"
 
 
@@ -76,9 +76,9 @@ loopR memory program =
     let jumpBack count program =
         case (count, List.head program.left) of
             (0, Just '[') -> program
-            (_, Just '[') -> goRight program |> jumpBack (count - 1)
-            (_, Just ']') -> goRight program |> jumpBack (count + 1)
-            _             -> goRight program |> jumpBack count
+            (_, Just '[') -> goLeft program |> jumpBack (count - 1)
+            (_, Just ']') -> goLeft program |> jumpBack (count + 1)
+            _             -> goLeft program |> jumpBack count
     in if toCode memory.curr /= 0 then jumpBack 0 program else goRight program
 
 
