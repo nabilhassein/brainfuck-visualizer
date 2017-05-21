@@ -94,14 +94,15 @@ readProgram program =
         runningCount = String.toList program |> List.scanl countBrackets 0
         anyMismatched = List.member -1 runningCount
         bracketCount = List.reverse runningCount |> List.head
+        programChars = String.filter (\c -> List.member c ['>', '<', '+', '-', '[', ']']) program |> flip String.append "\0"
     in if anyMismatched || bracketCount /= Just 0
        then Nothing
-       else case String.uncons program of
+       else case String.uncons programChars of
                 Nothing -> Nothing
-                Just (h, t) -> Just (BrainfuckProgram [] h (String.toList t))
+                Just (h, t) -> Just <| BrainfuckProgram [] h (String.toList t)
 
 -- TODO: how to deal with IO? (not yet implemented)
-runProgram : BrainfuckProgram -> Memory -> (BrainfuckProgram, Memory)
+runProgram : BrainfuckProgram -> Memory -> Memory
 runProgram program memory =
     let interpret program memory =
             case program.curr of
@@ -114,5 +115,5 @@ runProgram program memory =
                 _   -> (goRight program, memory)
         (newProgram, newMemory) = interpret program memory
     in if List.isEmpty newProgram.right
-       then (newProgram, newMemory) -- should I use the dummy trick again...?
+       then newMemory
        else runProgram newProgram newMemory

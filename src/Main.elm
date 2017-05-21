@@ -20,7 +20,7 @@ model = { maybeCode = Nothing, memory = initialMemory, rawProgram = "" }
 
 -- by default, memory has the null byte in each of its infinite cells
 initialMemory : Memory
-initialMemory = Memory (Stream.value '0') '0' (Stream.value '0')
+initialMemory = Memory (Stream.value '\0') '\0' (Stream.value '\0')
 
 
 -- UPDATE
@@ -33,8 +33,7 @@ update msg model = case msg of
     Run ->
         case model.maybeCode of
             Nothing -> model
-            Just code -> let (newCode, newMemory) = runProgram code model.memory
-                         in { model | maybeCode = Just newCode, memory = newMemory }
+            Just code -> { model | memory = runProgram code model.memory }
     Clear ->
       { model | memory = initialMemory }
 
