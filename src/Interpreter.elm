@@ -2,8 +2,10 @@ module Interpreter exposing (Memory, BrainfuckProgram, readProgram, runProgram)
 
 import Char exposing (fromCode, toCode)
 import Debug exposing (crash)
+import Dict exposing (Dict)
 import Stream exposing (Stream)
 
+-- in general see https://en.wikipedia.org/wiki/Brainfuck
 
 -- memory and programs are both examples of the zipper data structure
 -- if unfamiliar see http://learnyouahaskell.com/zippers
@@ -11,9 +13,17 @@ import Stream exposing (Stream)
 -- memory is a tape extending infinitely in both directions
 type alias Memory = { left : Stream Char, curr: Char, right : Stream Char }
 
--- programs are finite zippers
-type alias BrainfuckProgram = { left : List Char, curr: Char, right : List Char }
+-- explicit datatype for our commands
+type Command =
+    MemTransform (Memory -> Memory)
+        | ProgramTransformL (Memory -> BrainfuckProgram -> BrainfuckProgram)
+        | ProgramTransformR (Memory -> BrainfuckProgram -> BrainfuckProgram)
+        -- TODO: add IO
 
+-- programs are finite zippers of commands
+type alias BrainfuckProgram = { left : List Command, curr: Command, right : List Command }
+
+-- helper functions
 goRight : BrainfuckProgram -> BrainfuckProgram
 goRight program =
     case program.right of
@@ -64,10 +74,10 @@ loopL : Memory -> BrainfuckProgram -> BrainfuckProgram
 loopL memory program =
     let jumpPast count program =
         case (count, List.head program.right) of
-            (0, Just ']') -> goRight program |> goRight
-            (_, Just ']') -> goRight program |> jumpPast (count - 1)
-            (_, Just '[') -> goRight program |> jumpPast (count + 1)
-            _             -> goRight program |> jumpPast count
+            (0, Just (ProgramTransformR _)) -> goRight program |> goRight
+            (_, Just (ProgramTransformR _)) -> goRight program |> jumpPast (count - 1)
+            (_, Just (ProgramTransformL _)) -> goRight program |> jumpPast (count + 1)
+            _                               -> goRight program |> jumpPast count
     in if toCode memory.curr == 0 then jumpPast 0 program else goRight program
 
 -- command: ]
@@ -75,11 +85,22 @@ loopR : Memory -> BrainfuckProgram -> BrainfuckProgram
 loopR memory program =
     let jumpBack count program =
         case (count, List.head program.left) of
-            (0, Just '[') -> program
-            (_, Just '[') -> goLeft program |> jumpBack (count - 1)
-            (_, Just ']') -> goLeft program |> jumpBack (count + 1)
-            _             -> goLeft program |> jumpBack count
+            (0, Just (ProgramTransformL _)) -> program
+            (_, Just (ProgramTransformL _)) -> goLeft program |> jumpBack (count - 1)
+            (_, Just (ProgramTransformR _)) -> goLeft program |> jumpBack (count + 1)
+            _                               -> goLeft program |> jumpBack count
     in if toCode memory.curr /= 0 then jumpBack 0 program else goRight program
+
+
+charToCommand : Dict Char Command
+charToCommand = Dict.fromList [
+                 ('>', MemTransform incrementDataPointer),
+                 ('<', MemTransform decrementDataPointer),
+                 ('+', MemTransform incrementByte),
+                 ('-', MemTransform decrementByte),
+                 ('[', ProgramTransformL loopL),
+                 (']', ProgramTransformR loopR)
+                ]
 
 
 -- the only possible syntax errors in a brainfuck program are mismatched braces
@@ -94,26 +115,25 @@ readProgram program =
         runningCount = String.toList program |> List.scanl countBrackets 0
         anyMismatched = List.member -1 runningCount
         bracketCount = List.reverse runningCount |> List.head
-        programChars = String.filter (\c -> List.member c ['>', '<', '+', '-', '[', ']']) program |> flip String.append "\0"
     in if anyMismatched || bracketCount /= Just 0
        then Nothing
-       else case String.uncons programChars of
-                Nothing -> Nothing
-                Just (h, t) -> Just <| BrainfuckProgram [] h (String.toList t)
+       else let commands = String.toList program |>
+                           List.filterMap (\c -> Dict.get c charToCommand)
+            in case commands of
+                   []     -> Nothing
+                   h :: t -> Just <| BrainfuckProgram [] h (List.append t <| List.singleton (MemTransform identity))
 
 -- TODO: how to deal with IO? (not yet implemented)
+interpret : BrainfuckProgram -> Memory -> (BrainfuckProgram, Memory)
+interpret program memory =
+    case program.curr of
+        MemTransform cmd      -> (goRight program, cmd memory)
+        ProgramTransformL cmd -> (cmd memory program, memory)
+        ProgramTransformR cmd -> (cmd memory program, memory)
+
 runProgram : BrainfuckProgram -> Memory -> Memory
 runProgram program memory =
-    let interpret program memory =
-            case program.curr of
-                '>' -> (goRight program, incrementDataPointer memory)
-                '<' -> (goRight program, decrementDataPointer memory)
-                '+' -> (goRight program, incrementByte memory)
-                '-' -> (goRight program, decrementByte memory)
-                '[' -> (loopL memory program, memory)
-                ']' -> (loopR memory program, memory)
-                _   -> (goRight program, memory)
-        (newProgram, newMemory) = interpret program memory
-    in if List.isEmpty newProgram.right
+    let (newProgram, newMemory) = interpret program memory
+    in if List.isEmpty newProgram.right -- last command is never executed, hence why append dummy noop command above
        then newMemory
        else runProgram newProgram newMemory
